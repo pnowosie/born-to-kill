@@ -2,7 +2,7 @@
 import { fetchArchives, fetchMonth, fetchPlayerProfile, type RawGame } from './chessApi';
 import { analyzeGame } from './pgnAnalyzer';
 import { getMonth, putMonth, SCHEMA_VERSION } from './db';
-import type { WorkerInbound, WorkerOutbound, GameRecord } from '../shared/types';
+import { tallyKey, type WorkerInbound, type WorkerOutbound, type GameRecord, type GameTally } from '../shared/types';
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -19,20 +19,24 @@ self.onmessage = async (e: MessageEvent<WorkerInbound>) => {
       const cached = await getMonth(nick, url);
       let records: GameRecord[];
       let gameCount: number;
+      let tally: GameTally;
 
-      if (cached?.schemaVersion === SCHEMA_VERSION && cached.records && isCacheComplete(url, cached.storedAt)) {
+      if (cached?.schemaVersion === SCHEMA_VERSION && cached.records && cached.tally && isCacheComplete(url, cached.storedAt)) {
         // Hot path: analyzed records cached, no parse, no network.
         records = cached.records;
         gameCount = cached.gameCount ?? records.length;
+        tally = cached.tally;
       } else if (cached?.games && isCacheComplete(url, cached.storedAt)) {
         // Legacy v1 entry: re-analyze in place (no refetch), upgrade the cache.
         const games = cached.games as RawGame[];
         records = analyzeAll(games, nick);
         gameCount = games.length;
+        tally = tallyGames(games);
         await putMonth(nick, url, {
           schemaVersion: SCHEMA_VERSION,
           gameCount,
           records,
+          tally,
           storedAt: Date.now(),
         });
       } else {
@@ -40,10 +44,12 @@ self.onmessage = async (e: MessageEvent<WorkerInbound>) => {
         const result = await fetchMonth(url);
         records = analyzeAll(result.games, nick);
         gameCount = result.games.length;
+        tally = tallyGames(result.games);
         await putMonth(nick, url, {
           schemaVersion: SCHEMA_VERSION,
           gameCount,
           records,
+          tally,
           storedAt: Date.now(),
         });
       }
@@ -53,6 +59,7 @@ self.onmessage = async (e: MessageEvent<WorkerInbound>) => {
         gamesInMonth: gameCount,
         matesInMonth: records.length,
         records,
+        tally,
       });
     }
 
@@ -78,6 +85,18 @@ function analyzeAll(games: RawGame[], nick: string): GameRecord[] {
     if (rec) out.push(rec);
   }
   return out;
+}
+
+// Histogram of every game (mate or not) by time class + rated, so the dashboard
+// can break the games/mates counters down per filter. Summing all entries
+// reproduces gameCount.
+function tallyGames(games: RawGame[]): GameTally {
+  const tally: GameTally = {};
+  for (const g of games) {
+    const k = tallyKey(g.time_class, g.rated);
+    tally[k] = (tally[k] ?? 0) + 1;
+  }
+  return tally;
 }
 
 // Cache for a /YYYY/MM archive is trustworthy only if it was written AFTER

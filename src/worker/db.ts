@@ -1,13 +1,16 @@
 import { openDB, type IDBPDatabase } from 'idb';
-import type { GameRecord } from '../shared/types';
+import type { GameRecord, GameTally } from '../shared/types';
 
 // Bump whenever GameRecord shape or analyzer logic changes — invalidates cache.
-export const SCHEMA_VERSION = 2;
+// v3 adds `tally` (per-class game histogram); v2 caches lack it and can't
+// reconstruct it (raw games weren't kept), so the bump forces a one-time refetch.
+export const SCHEMA_VERSION = 3;
 
 export interface MonthCache {
   schemaVersion?: number;   // missing = legacy v1 (raw games only)
   gameCount?: number;
   records?: GameRecord[];
+  tally?: GameTally;
   games?: unknown[];        // legacy raw games; kept readable for one-shot migration
   storedAt: number;
 }

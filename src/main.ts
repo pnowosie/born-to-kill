@@ -1,10 +1,9 @@
-import { reset, addRecords, setFilter, render } from './ui/dashboard';
+import { reset, addMonth, setFilter, getStats, render } from './ui/dashboard';
 import type { WorkerInbound, WorkerOutbound, TimeClass, PlayerProfile } from './shared/types';
 
 const DEFAULT_AVATAR = 'badges/queen.png';
 
 let worker: Worker | null = null;
-const totals = { games: 0, mates: 0 };
 
 const form = document.getElementById('nick-form') as HTMLFormElement;
 const input = document.getElementById('nick-input') as HTMLInputElement;
@@ -40,15 +39,14 @@ function showPlayer(profile: PlayerProfile) {
 }
 
 function updateStats() {
-  statGames.textContent = totals.games.toLocaleString();
-  statMates.textContent = totals.mates.toLocaleString();
+  const { games, mates } = getStats();
+  statGames.textContent = games.toLocaleString();
+  statMates.textContent = mates.toLocaleString();
 }
 
 function start(nick: string) {
   worker?.terminate();
   reset();
-  totals.games = 0;
-  totals.mates = 0;
   updateStats();
   statusEl.textContent = '…loading';
   statusEl.className = 'player-status is-loading';
@@ -68,9 +66,7 @@ function start(nick: string) {
         statusEl.className = 'player-status is-loading';
         break;
       case 'month-done':
-        totals.games += msg.gamesInMonth;
-        totals.mates += msg.matesInMonth;
-        addRecords(msg.records);
+        addMonth(msg.records, msg.tally);
         updateStats();
         break;
       case 'done':
@@ -101,10 +97,12 @@ document.querySelectorAll<HTMLButtonElement>('.chip').forEach((chip) => {
     document.querySelectorAll('.chip').forEach((c) => c.classList.remove('is-active'));
     chip.classList.add('is-active');
     setFilter({ timeClass: chip.dataset.tc as TimeClass | 'all' });
+    updateStats();
   });
 });
 document.getElementById('rated-only')?.addEventListener('change', (e) => {
   setFilter({ ratedOnly: (e.target as HTMLInputElement).checked });
+  updateStats();
 });
 
 render();

@@ -1,5 +1,5 @@
 import { BADGES, type BadgeMeta } from '../shared/constants';
-import type { GameRecord, TimeClass } from '../shared/types';
+import type { GameRecord, GameTally, TimeClass } from '../shared/types';
 import { bucketKey } from '../shared/types';
 
 interface BinSlot {
@@ -14,15 +14,20 @@ interface Filters {
 }
 
 let allRecords: GameRecord[] = [];
+let gameTally: GameTally = {};
 let filters: Filters = { timeClass: 'all', ratedOnly: false };
 
 export function reset() {
   allRecords = [];
+  gameTally = {};
   render();
 }
 
-export function addRecords(records: GameRecord[]) {
+export function addMonth(records: GameRecord[], tally: GameTally) {
   if (records.length) allRecords.push(...records);
+  for (const [k, n] of Object.entries(tally)) {
+    gameTally[k] = (gameTally[k] ?? 0) + n;
+  }
   render();
 }
 
@@ -37,6 +42,19 @@ function applyFilters(): GameRecord[] {
     if (filters.ratedOnly && !r.rated) return false;
     return true;
   });
+}
+
+// Counts that respect the active filters: mates come straight from the filtered
+// records, games from the per-class tally (which includes non-mate games).
+export function getStats(): { games: number; mates: number } {
+  let games = 0;
+  for (const [k, n] of Object.entries(gameTally)) {
+    const [tc, rated] = k.split('|');
+    if (filters.timeClass !== 'all' && tc !== filters.timeClass) continue;
+    if (filters.ratedOnly && rated !== 'r') continue;
+    games += n;
+  }
+  return { games, mates: applyFilters().length };
 }
 
 function bin(records: GameRecord[]): Map<string, BinSlot> {

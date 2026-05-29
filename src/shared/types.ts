@@ -29,6 +29,15 @@ export interface PlayerProfile {
   url: string;
 }
 
+// Per-month histogram of *all* games keyed by time class + rated flag, so the
+// dashboard can show games/mates counts that respect the active filters without
+// keeping a record for every non-mate game. See tallyKey().
+export type GameTally = Record<string, number>;
+
+export function tallyKey(timeClass: TimeClass, rated: boolean): string {
+  return `${timeClass}|${rated ? 'r' : 'u'}`;
+}
+
 export type WorkerInbound = { type: 'start'; nick: string };
 
 export type WorkerOutbound =
@@ -39,6 +48,7 @@ export type WorkerOutbound =
       gamesInMonth: number;
       matesInMonth: number;
       records: GameRecord[];
+      tally: GameTally;
     }
   | { type: 'done' }
   | { type: 'error'; message: string };
