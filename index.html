@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Born to Kill — chess.com checkmate stats</title>
+  <link rel="icon" type="image/png" href="./badges/queen.png" />
+  <link rel="stylesheet" href="./src/styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <h1>Born to Kill</h1>
+    <p class="tagline">Which piece is your killer?</p>
+    <form id="nick-form">
+      <input id="nick-input" type="text" placeholder="chess.com username" required autocomplete="off" spellcheck="false" />
+      <button type="submit">Analyze</button>
+    </form>
+    <div id="error" class="error" role="alert" hidden></div>
+  </header>
+
+  <section id="filters" class="filters" hidden>
+    <div class="filter-group" role="group" aria-label="Time class">
+      <button type="button" class="chip is-active" data-tc="all">all</button>
+      <button type="button" class="chip" data-tc="bullet">bullet</button>
+      <button type="button" class="chip" data-tc="blitz">blitz</button>
+      <button type="button" class="chip" data-tc="rapid">rapid</button>
+      <button type="button" class="chip" data-tc="daily">daily</button>
+    </div>
+    <label class="rated-toggle">
+      <input type="checkbox" id="rated-only" />
+      <span>rated only</span>
+    </label>
+  </section>
+
+  <section id="player-pane" class="player-pane" hidden>
+    <img id="player-avatar" class="player-avatar" alt="" />
+    <div class="player-info">
+      <a id="player-link" class="player-nick" target="_blank" rel="noopener"></a>
+      <div class="player-stats">
+        <span><strong id="stat-games">0</strong> games</span>
+        <span class="dot">·</span>
+        <span><strong id="stat-mates">0</strong> mates</span>
+        <span id="player-status" class="player-status"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="badge-wall" class="badge-wall"></section>
+
+  <footer class="footnote">
+    built with chess.com's public API · serial fetch, ETag-cached, browser-only
+  </footer>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
